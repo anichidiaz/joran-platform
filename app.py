@@ -56,7 +56,7 @@ elif opcion == "📋 Gestión de JIRAs Real":
         while True:
             try:
                 response = requests.get(
-                    f"{JIRA_URL}/rest/api/2/search",
+                    f"{JIRA_URL}/rest/api/3/search/jql",
                     params={
                         "jql": jql,
                         "startAt": start_at,
