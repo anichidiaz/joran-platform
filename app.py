@@ -43,9 +43,9 @@ elif opcion == "📋 Gestión de JIRAs Real":
         headers = {"Accept": "application/json"}
  
         if tipo_filtro == "Cliente":
-            jql = "project = 'BBVA_Fixed Income Client' ORDER BY updated DESC"
+            jql = "project = 'BBVA_Fixed_Income_Client' ORDER BY updated DESC"
         elif tipo_filtro == "Interno":
-            jql = "project = 'BBVA_Fixed Income Internal' ORDER BY updated DESC"
+            jql = "project = 'BBVA_Fixed_Income_Internal' ORDER BY updated DESC"
         else:
             jql = "project is not EMPTY ORDER BY updated DESC"
  
