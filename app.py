@@ -69,7 +69,7 @@ if opcion == "📊 Panel de control general":
     st.title("📊 Panel de Estado General")
     st.write("Bienvenida a Joran. Selecciona una opción en el menú de la izquierda para operar con tus plataformas.")
 
-elif opcion == "📋 Gestión de JIRAs":
+elif opcion == "📋 Gestión de JIRAs Real":
     st.title("📋 Conector Oficial de JIRA (Datos en Vivo)")
 
     # --- FILTRO DE TIPO ---
