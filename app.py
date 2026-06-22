@@ -13,7 +13,7 @@ JIRA_TOKEN = os.getenv("JIRA_TOKEN")
 st.set_page_config(page_title="Joran Platform", layout="wide")
 
 def obtener_tickets_reales_jira():
-    url = f"{JIRA_URL}/rest/api/3/search/jql"
+    url = f"{JIRA_URL}/rest/api/3/search"
 
     payload = {
         "jql": "project is not EMPTY ORDER BY updated DESC",  # Sin filtro — trae todos los tickets visibles para tu usuario
@@ -111,7 +111,7 @@ elif opcion == "📋 Gestión de JIRAs Real":
 
             try:
                 response = requests.post(
-                    f"{JIRA_URL}/rest/api/3/search/jql",
+                    f"{JIRA_URL}/rest/api/3/search",
                     json=payload,
                     headers=headers,
                     auth=auth,
