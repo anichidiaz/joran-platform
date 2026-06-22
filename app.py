@@ -69,13 +69,88 @@ if opcion == "📊 Panel de control general":
     st.title("📊 Panel de Estado General")
     st.write("Bienvenida a Joran. Selecciona una opción en el menú de la izquierda para operar con tus plataformas.")
 
-elif opcion == "📋 Gestión de JIRAs Real":
+elif opcion == "📋 Gestión de JIRAs":
     st.title("📋 Conector Oficial de JIRA (Datos en Vivo)")
+
+    # --- FILTRO DE TIPO ---
+    tipo_jira = st.radio(
+        "¿Qué JIRAs quieres ver?",
+        ["Todos", "Cliente", "Interno"],
+        horizontal=True
+    )
 
     estado_placeholder = st.empty()
     estado_placeholder.info("Conectando con finiq.atlassian.net...")
 
-    lista_tickets, origen = obtener_tickets_reales_jira()
+    def obtener_todos_los_tickets(tipo_filtro):
+        auth = HTTPBasicAuth(JIRA_EMAIL, JIRA_TOKEN)
+        headers = {
+            "Accept": "application/json",
+            "Content-Type": "application/json"
+        }
+
+        # JQL según filtro
+        if tipo_filtro == "Cliente":
+            jql = "project is not EMPTY AND issueType in standardIssueTypes() ORDER BY updated DESC"
+        elif tipo_filtro == "Interno":
+            jql = "project is not EMPTY AND issueType in subTaskIssueTypes() ORDER BY updated DESC"
+        else:
+            jql = "project is not EMPTY ORDER BY updated DESC"
+
+        todos_los_tickets = []
+        start_at = 0
+        page_size = 100  # Máximo permitido por Jira
+
+        while True:
+            payload = {
+                "jql": jql,
+                "startAt": start_at,
+                "maxResults": page_size,
+                "fields": ["summary", "status", "issuetype", "priority", "project", "assignee", "reporter"]
+            }
+
+            try:
+                response = requests.post(
+                    f"{JIRA_URL}/rest/api/3/search/jql",
+                    json=payload,
+                    headers=headers,
+                    auth=auth,
+                    timeout=15
+                )
+
+                if response.status_code != 200:
+                    return [], "ERROR_HTTP"
+
+                datos = response.json()
+                issues = datos.get("issues", [])
+                total = datos.get("total", 0)
+
+                for issue in issues:
+                    todos_los_tickets.append({
+                        "ID": issue["key"],
+                        "Proyecto": issue["fields"].get("project", {}).get("name", "—"),
+                        "Resumen": issue["fields"].get("summary", "Sin título"),
+                        "Tipo": issue["fields"]["issuetype"]["name"] if issue["fields"].get("issuetype") else "—",
+                        "Estado": issue["fields"]["status"]["name"] if issue["fields"].get("status") else "—",
+                        "Prioridad": issue["fields"]["priority"]["name"] if issue["fields"].get("priority") else "—",
+                        "Asignado a": issue["fields"]["assignee"]["displayName"] if issue["fields"].get("assignee") else "Sin asignar",
+                        "Reportado por": issue["fields"]["reporter"]["displayName"] if issue["fields"].get("reporter") else "—",
+                    })
+
+                start_at += page_size
+
+                # Si ya tenemos todos, paramos
+                if start_at >= total:
+                    break
+
+            except requests.exceptions.Timeout:
+                return [], "ERROR_TIMEOUT"
+            except Exception as e:
+                return [], "ERROR_GENERICO"
+
+        return todos_los_tickets, "REAL"
+
+    lista_tickets, origen = obtener_todos_los_tickets(tipo_jira)
 
     if origen == "REAL" and lista_tickets:
         estado_placeholder.success(f"✅ {len(lista_tickets)} tickets sincronizados con Atlassian.")
@@ -111,7 +186,6 @@ elif opcion == "📋 Gestión de JIRAs Real":
                         issue = r.json()
                         fields = issue.get("fields", {})
 
-                        # --- CABECERA ---
                         col1, col2, col3 = st.columns(3)
                         col1.metric("Estado", fields.get("status", {}).get("name", "—"))
                         col2.metric("Tipo", fields.get("issuetype", {}).get("name", "—"))
@@ -129,7 +203,6 @@ elif opcion == "📋 Gestión de JIRAs Real":
                         col6.write(f"📅 **Creado:** {fields.get('created', '—')[:10] if fields.get('created') else '—'}")
                         col7.write(f"🔄 **Actualizado:** {fields.get('updated', '—')[:10] if fields.get('updated') else '—'}")
 
-                        # --- DESCRIPCIÓN ---
                         st.write("---")
                         st.write("**📋 Descripción:**")
                         descripcion = fields.get("description")
@@ -143,7 +216,6 @@ elif opcion == "📋 Gestión de JIRAs Real":
                         else:
                             st.write("_Sin descripción_")
 
-                        # --- ADJUNTOS E IMÁGENES ---
                         adjuntos = fields.get("attachment", [])
                         if adjuntos:
                             st.write("---")
@@ -152,24 +224,16 @@ elif opcion == "📋 Gestión de JIRAs Real":
                                 nombre = adj.get("filename", "archivo")
                                 url_adj = adj.get("content", "")
                                 mime = adj.get("mimeType", "")
-
-                                # Si es imagen, mostrarla directamente
                                 if mime.startswith("image/"):
                                     try:
-                                        img_response = requests.get(
-                                            url_adj,
-                                            auth=HTTPBasicAuth(JIRA_EMAIL, JIRA_TOKEN),
-                                            timeout=10
-                                        )
+                                        img_response = requests.get(url_adj, auth=HTTPBasicAuth(JIRA_EMAIL, JIRA_TOKEN), timeout=10)
                                         if img_response.status_code == 200:
                                             st.image(img_response.content, caption=nombre, use_column_width=True)
                                     except:
                                         st.write(f"🖼️ No se pudo cargar la imagen: {nombre}")
                                 else:
-                                    # Para otros tipos de archivo, enlace de descarga
                                     st.markdown(f"📄 [{nombre}]({url_adj})")
 
-                        # --- COMENTARIOS ---
                         comentarios = fields.get("comment", {}).get("comments", [])
                         if comentarios:
                             st.write("---")
@@ -177,7 +241,6 @@ elif opcion == "📋 Gestión de JIRAs Real":
                             for com in comentarios:
                                 autor = com.get("author", {}).get("displayName", "Desconocido")
                                 fecha = com.get("created", "")[:10]
-                                # Extraer texto del formato Atlassian Document Format
                                 cuerpo = com.get("body", {})
                                 texto_com = []
                                 if isinstance(cuerpo, dict):
@@ -186,11 +249,9 @@ elif opcion == "📋 Gestión de JIRAs Real":
                                             if item.get("type") == "text":
                                                 texto_com.append(item.get("text", ""))
                                 texto_final = " ".join(texto_com) if texto_com else "_Sin texto_"
-
                                 with st.expander(f"💬 {autor} — {fecha}"):
                                     st.write(texto_final)
 
-                        # --- HISTORIAL DE CAMBIOS ---
                         changelog = issue.get("changelog", {}).get("histories", [])
                         if changelog:
                             st.write("---")
@@ -205,7 +266,6 @@ elif opcion == "📋 Gestión de JIRAs Real":
                                         despues = item.get("toString", "—")
                                         st.write(f"• `{fecha}` **{autor}** cambió **{campo}**: _{antes}_ → _{despues}_")
 
-                        # --- ENLACE DIRECTO ---
                         st.write("---")
                         st.markdown(f"🔗 [Abrir en Jira]({JIRA_URL}/browse/{ticket_id})")
 
@@ -220,6 +280,7 @@ elif opcion == "📋 Gestión de JIRAs Real":
     else:
         estado_placeholder.warning(f"No se pudo conectar ({origen}).")
 
+   
         
 
 elif opcion == "💽S Entorno FinIQ":
