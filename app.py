@@ -119,7 +119,7 @@ elif opcion == "📋 Gestión de JIRAs Real":
                 )
 
                 if response.status_code != 200:
-                    return [], "ERROR_HTTP"
+                    return [], f"ERROR_HTTP_{response.status_code}"
 
                 datos = response.json()
                 issues = datos.get("issues", [])
