@@ -13,38 +13,38 @@ JIRA_TOKEN = os.getenv("JIRA_TOKEN")
 st.set_page_config(page_title="Joran Platform", layout="wide")
  
 st.sidebar.title("Joran 🤖")
-st.sidebar.caption("Plataforma de Operaciones Unificada")
+st.sidebar.caption("Unified Operations Platform")
 st.sidebar.write("---")
  
 opcion = st.sidebar.radio(
-    "Selecciona una plataforma:",
-    ["📊 Panel de control general", "📋 Gestión de JIRAs Real", "💽 Entorno FinIQ"],
+    "Select a platform:",
+    ["📊 General Dashboard", "📋 JIRA Management", "💽 FinIQ Environment"],
     label_visibility="visible"
 )
  
-if opcion == "📊 Panel de control general":
-    st.title("📊 Panel de Estado General")
-    st.write("Bienvenida a Joran. Selecciona una opción en el menú de la izquierda para operar con tus plataformas.")
+if opcion == "📊 General Dashboard":
+    st.title("📊 General Status Dashboard")
+    st.write("Welcome to Joran. Select an option from the left menu to operate your platforms.")
  
-elif opcion == "📋 Gestión de JIRAs Real":
-    st.title("📋 Conector Oficial de JIRA (Datos en Vivo)")
+elif opcion == "📋 JIRA Management":
+    st.title("📋 Official JIRA Connector (Live Data)")
  
     tipo_jira = st.radio(
-        "¿Qué JIRAs quieres ver?",
-        ["Todos", "Cliente", "Interno"],
+        "Which JIRAs do you want to see?",
+        ["All", "Client", "Internal"],
         horizontal=True
     )
  
     estado_placeholder = st.empty()
-    estado_placeholder.info("Conectando con finiq.atlassian.net...")
+    estado_placeholder.info("Connecting to finiq.atlassian.net...")
  
     def obtener_todos_los_tickets(tipo_filtro):
         auth = HTTPBasicAuth(JIRA_EMAIL, JIRA_TOKEN)
         headers = {"Accept": "application/json"}
  
-        if tipo_filtro == "Cliente":
+        if tipo_filtro == "Client":
             jql = "project = 'BBVA_Fixed_Income_Client' ORDER BY updated DESC"
-        elif tipo_filtro == "Interno":
+        elif tipo_filtro == "Internal":
             jql = "project = 'BBVA_Fixed_Income_Internal' ORDER BY updated DESC"
         else:
             jql = "project is not EMPTY ORDER BY updated DESC"
@@ -78,13 +78,13 @@ elif opcion == "📋 Gestión de JIRAs Real":
                 for issue in issues:
                     todos_los_tickets.append({
                         "ID": issue["key"],
-                        "Proyecto": issue["fields"].get("project", {}).get("name", "—"),
-                        "Resumen": issue["fields"].get("summary", "Sin título"),
-                        "Tipo": issue["fields"]["issuetype"]["name"] if issue["fields"].get("issuetype") else "—",
-                        "Estado": issue["fields"]["status"]["name"] if issue["fields"].get("status") else "—",
-                        "Prioridad": issue["fields"]["priority"]["name"] if issue["fields"].get("priority") else "—",
-                        "Asignado a": issue["fields"]["assignee"]["displayName"] if issue["fields"].get("assignee") else "Sin asignar",
-                        "Reportado por": issue["fields"]["reporter"]["displayName"] if issue["fields"].get("reporter") else "—",
+                        "Project": issue["fields"].get("project", {}).get("name", "—"),
+                        "Summary": issue["fields"].get("summary", "No title"),
+                        "Type": issue["fields"]["issuetype"]["name"] if issue["fields"].get("issuetype") else "—",
+                        "Status": issue["fields"]["status"]["name"] if issue["fields"].get("status") else "—",
+                        "Priority": issue["fields"]["priority"]["name"] if issue["fields"].get("priority") else "—",
+                        "Assigned to": issue["fields"]["assignee"]["displayName"] if issue["fields"].get("assignee") else "Unassigned",
+                        "Reported by": issue["fields"]["reporter"]["displayName"] if issue["fields"].get("reporter") else "—",
                     })
  
                 start_at += page_size
@@ -95,19 +95,19 @@ elif opcion == "📋 Gestión de JIRAs Real":
             except requests.exceptions.Timeout:
                 return [], "ERROR_TIMEOUT"
             except Exception as e:
-                return [], "ERROR_GENERICO"
+                return [], "ERROR_GENERIC"
  
         return todos_los_tickets, "REAL"
  
     lista_tickets, origen = obtener_todos_los_tickets(tipo_jira)
  
     if origen == "REAL" and lista_tickets:
-        estado_placeholder.success(f"✅ {len(lista_tickets)} tickets sincronizados con Atlassian.")
+        estado_placeholder.success(f"✅ {len(lista_tickets)} tickets synced with Atlassian.")
  
         import pandas as pd
         df = pd.DataFrame(lista_tickets)
  
-        st.write("**Selecciona una fila para ver el detalle completo:**")
+        st.write("**Select a row to see full details:**")
         seleccion = st.dataframe(
             df,
             use_container_width=True,
@@ -122,9 +122,9 @@ elif opcion == "📋 Gestión de JIRAs Real":
             ticket_id = lista_tickets[indice]["ID"]
  
             st.divider()
-            st.subheader(f"📄 Detalle completo: {ticket_id}")
+            st.subheader(f"📄 Full details: {ticket_id}")
  
-            with st.spinner(f"Cargando detalle de {ticket_id}..."):
+            with st.spinner(f"Loading details for {ticket_id}..."):
                 url_detalle = f"{JIRA_URL}/rest/api/3/issue/{ticket_id}?expand=renderedFields,changelog,attachment,comment"
                 auth = HTTPBasicAuth(JIRA_EMAIL, JIRA_TOKEN)
                 headers = {"Accept": "application/json"}
@@ -136,24 +136,24 @@ elif opcion == "📋 Gestión de JIRAs Real":
                         fields = issue.get("fields", {})
  
                         col1, col2, col3 = st.columns(3)
-                        col1.metric("Estado", fields.get("status", {}).get("name", "—"))
-                        col2.metric("Tipo", fields.get("issuetype", {}).get("name", "—"))
-                        col3.metric("Prioridad", fields.get("priority", {}).get("name", "—") if fields.get("priority") else "—")
+                        col1.metric("Status", fields.get("status", {}).get("name", "—"))
+                        col2.metric("Type", fields.get("issuetype", {}).get("name", "—"))
+                        col3.metric("Priority", fields.get("priority", {}).get("name", "—") if fields.get("priority") else "—")
  
-                        st.markdown(f"### {fields.get('summary', 'Sin título')}")
+                        st.markdown(f"### {fields.get('summary', 'No title')}")
  
                         col4, col5 = st.columns(2)
                         assignee = fields.get("assignee")
                         reporter = fields.get("reporter")
-                        col4.write(f"👤 **Asignado a:** {assignee['displayName'] if assignee else 'Sin asignar'}")
-                        col5.write(f"📝 **Reportado por:** {reporter['displayName'] if reporter else '—'}")
+                        col4.write(f"👤 **Assigned to:** {assignee['displayName'] if assignee else 'Unassigned'}")
+                        col5.write(f"📝 **Reported by:** {reporter['displayName'] if reporter else '—'}")
  
                         col6, col7 = st.columns(2)
-                        col6.write(f"📅 **Creado:** {fields.get('created', '—')[:10] if fields.get('created') else '—'}")
-                        col7.write(f"🔄 **Actualizado:** {fields.get('updated', '—')[:10] if fields.get('updated') else '—'}")
+                        col6.write(f"📅 **Created:** {fields.get('created', '—')[:10] if fields.get('created') else '—'}")
+                        col7.write(f"🔄 **Updated:** {fields.get('updated', '—')[:10] if fields.get('updated') else '—'}")
  
                         st.write("---")
-                        st.write("**📋 Descripción:**")
+                        st.write("**📋 Description:**")
                         descripcion = fields.get("description")
                         if descripcion and descripcion.get("content"):
                             texto = []
@@ -161,16 +161,16 @@ elif opcion == "📋 Gestión de JIRAs Real":
                                 for item in bloque.get("content", []):
                                     if item.get("type") == "text":
                                         texto.append(item.get("text", ""))
-                            st.write(" ".join(texto) if texto else "_Sin descripción_")
+                            st.write(" ".join(texto) if texto else "_No description_")
                         else:
-                            st.write("_Sin descripción_")
+                            st.write("_No description_")
  
                         adjuntos = fields.get("attachment", [])
                         if adjuntos:
                             st.write("---")
-                            st.write(f"**📎 Adjuntos ({len(adjuntos)}):**")
+                            st.write(f"**📎 Attachments ({len(adjuntos)}):**")
                             for adj in adjuntos:
-                                nombre = adj.get("filename", "archivo")
+                                nombre = adj.get("filename", "file")
                                 url_adj = adj.get("content", "")
                                 mime = adj.get("mimeType", "")
                                 if mime.startswith("image/"):
@@ -179,16 +179,16 @@ elif opcion == "📋 Gestión de JIRAs Real":
                                         if img_response.status_code == 200:
                                             st.image(img_response.content, caption=nombre, use_container_width=True)
                                     except:
-                                        st.write(f"🖼️ No se pudo cargar la imagen: {nombre}")
+                                        st.write(f"🖼️ Could not load image: {nombre}")
                                 else:
                                     st.markdown(f"📄 [{nombre}]({url_adj})")
  
                         comentarios = fields.get("comment", {}).get("comments", [])
                         if comentarios:
                             st.write("---")
-                            st.write(f"**💬 Comentarios ({len(comentarios)}):**")
+                            st.write(f"**💬 Comments ({len(comentarios)}):**")
                             for com in comentarios:
-                                autor = com.get("author", {}).get("displayName", "Desconocido")
+                                autor = com.get("author", {}).get("displayName", "Unknown")
                                 fecha = com.get("created", "")[:10]
                                 cuerpo = com.get("body", {})
                                 texto_com = []
@@ -197,15 +197,15 @@ elif opcion == "📋 Gestión de JIRAs Real":
                                         for item in bloque.get("content", []):
                                             if item.get("type") == "text":
                                                 texto_com.append(item.get("text", ""))
-                                texto_final = " ".join(texto_com) if texto_com else "_Sin texto_"
+                                texto_final = " ".join(texto_com) if texto_com else "_No text_"
                                 with st.expander(f"💬 {autor} — {fecha}"):
                                     st.write(texto_final)
  
                         changelog = issue.get("changelog", {}).get("histories", [])
                         if changelog:
                             st.write("---")
-                            st.write(f"**🕓 Historial de cambios ({len(changelog)}):**")
-                            with st.expander("Ver historial completo"):
+                            st.write(f"**🕓 Change history ({len(changelog)}):**")
+                            with st.expander("View full history"):
                                 for cambio in reversed(changelog):
                                     autor = cambio.get("author", {}).get("displayName", "—")
                                     fecha = cambio.get("created", "")[:10]
@@ -213,25 +213,25 @@ elif opcion == "📋 Gestión de JIRAs Real":
                                         campo = item.get("field", "—")
                                         antes = item.get("fromString", "—")
                                         despues = item.get("toString", "—")
-                                        st.write(f"• `{fecha}` **{autor}** cambió **{campo}**: _{antes}_ → _{despues}_")
+                                        st.write(f"• `{fecha}` **{autor}** changed **{campo}**: _{antes}_ → _{despues}_")
  
                         st.write("---")
-                        st.markdown(f"🔗 [Abrir en Jira]({JIRA_URL}/browse/{ticket_id})")
+                        st.markdown(f"🔗 [Open in Jira]({JIRA_URL}/browse/{ticket_id})")
  
                     else:
-                        st.error(f"Error al cargar el detalle: HTTP {r.status_code}")
+                        st.error(f"Error loading details: HTTP {r.status_code}")
  
                 except Exception as e:
-                    st.error(f"Error de conexión: {e}")
+                    st.error(f"Connection error: {e}")
  
     elif origen == "REAL" and not lista_tickets:
-        estado_placeholder.warning("Conexión OK pero sin tickets visibles para tu usuario.")
+        estado_placeholder.warning("Connection OK but no tickets visible for your user.")
     else:
-        estado_placeholder.warning(f"No se pudo conectar ({origen}).")
+        estado_placeholder.warning(f"Could not connect ({origen}).")
  
-elif opcion == "💽 Entorno FinIQ":
+elif opcion == "💽 FinIQ Environment":
     st.title("💽 Euroconnect Equity Structures")
-    st.write("Configuración del entorno de testeo:")
+    st.write("Test environment configuration:")
     col1, col2 = st.columns(2)
     with col1:
         st.text_input("On behalf Of", value="DESHAW")
@@ -239,3 +239,4 @@ elif opcion == "💽 Entorno FinIQ":
     with col2:
         st.selectbox("Coupon Type", ["Conditional with memory", "Fixed"])
         st.checkbox("Memory Coupon", value=True)
+ 
