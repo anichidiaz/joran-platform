@@ -222,7 +222,7 @@ elif opcion == "📋 Gestión de JIRAs Real":
 
         
 
-elif opcion == "💽 Entorno FinIQ":
+elif opcion == "💽S Entorno FinIQ":
     st.title("💽 Euroconnect Equity Structures")
     st.write("Configuración del entorno de testeo:")
     col1, col2 = st.columns(2)
